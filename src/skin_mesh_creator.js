@@ -108,10 +108,10 @@ function SkinMesh(width, height, overlayScalar){
         var uvAttribute = box.attributes.uv;
     
         SetFaceUVs(FRONT_FACE,  SquareToUVs(20, 20, 8, 12), uvAttribute);
-        SetFaceUVs(BACK_FACE,   SquareToUVs(28, 20, 8, 12), uvAttribute);
+        SetFaceUVs(BACK_FACE,   SquareToUVs(32, 20, 8, 12), uvAttribute);
     
-        SetFaceUVs(LEFT_FACE,   SquareToUVs(36, 20, 4, 12), uvAttribute);
-        SetFaceUVs(RIGHT_FACE,  SquareToUVs(16, 20, 4, 12), uvAttribute);
+        SetFaceUVs(LEFT_FACE,   SquareToUVs(16, 20, 4, 12), uvAttribute);
+        SetFaceUVs(RIGHT_FACE,  SquareToUVs(28, 20, 4, 12), uvAttribute);
     
         SetFaceUVs(TOP_FACE,    SquareToUVs(20, 16, 8, 4), uvAttribute);
         SetFaceUVs(BOTTOM_FACE, SquareToUVs(28, 16, 8, 4), uvAttribute);
@@ -127,10 +127,10 @@ function SkinMesh(width, height, overlayScalar){
         var uvAttribute = box.attributes.uv;
     
         SetFaceUVs(FRONT_FACE,  SquareToUVs(20, 16 + 20, 8, 12), uvAttribute);
-        SetFaceUVs(BACK_FACE,   SquareToUVs(28, 16 + 20, 8, 12), uvAttribute);
+        SetFaceUVs(BACK_FACE,   SquareToUVs(32, 16 + 20, 8, 12), uvAttribute);
     
-        SetFaceUVs(LEFT_FACE,   SquareToUVs(36, 16 + 20, 4, 12), uvAttribute);
-        SetFaceUVs(RIGHT_FACE,  SquareToUVs(16, 16 + 20, 4, 12), uvAttribute);
+        SetFaceUVs(LEFT_FACE,   SquareToUVs(16, 16 + 20, 4, 12), uvAttribute);
+        SetFaceUVs(RIGHT_FACE,  SquareToUVs(28, 16 + 20, 4, 12), uvAttribute);
     
         SetFaceUVs(TOP_FACE,    SquareToUVs(20, 16 + 16, 8, 4), uvAttribute);
         SetFaceUVs(BOTTOM_FACE, SquareToUVs(28, 16 + 16, 8, 4), uvAttribute);
