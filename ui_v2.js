@@ -35,7 +35,7 @@ var settings = {
 };
 
 var colors = {
-    brushColor: [0, 0, 0],
+    brushColor: {r: 1, g: 0, b: 0, a: 1},
     clearColor: [255, 255, 255]
 };
 var brushSize = {
@@ -101,7 +101,7 @@ function GetCurrentSlotColor(){
 
 function GetColorForPart(part) {
     let color = {};
-    Object.assign(color, GetCurrentSlotColor())
+    Object.assign(color, currentSelectedColor)
 
     if (!part.object.userData.isOverlay) {
         color.a = 1;
@@ -259,8 +259,8 @@ function ToggleOverlayPart(part) {
     copperOre.ToggleOverlayPart(part)
 }
 
-function SetCurrentColor(event) {
-    console.log(event)
+function SetCurrentColor(color) {
+    currentSelectedColor = color;
 }
 
 function Initialize() {
@@ -301,9 +301,17 @@ function Initialize() {
         console.log(copperOre.SetCurrentTool(event.target.value));
     })
 
-    let colorPicker = new ColorPicker({
+    let colorPicker;
+    colorPicker = new ColorPicker({
         appendTo: document.getElementById("color-picker"),
-        actionCallback: this.SetCurrentColor
+        color: 'ff0000',
+        mode: 'hsv-h',
+        actionCallback: (event) => {
+            if (colorPicker == undefined) { return; }
+            console.log(colorPicker.color)
+            let rgb = colorPicker.color.colors.rgb;
+            SetCurrentColor({r: rgb.r, g: rgb.g, b: rgb.b, a: colorPicker.color.colors.alpha});
+        }
     })
 
     var skyboxes = [
