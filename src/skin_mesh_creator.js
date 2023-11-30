@@ -108,10 +108,10 @@ function SkinMesh(width, height, overlayScalar){
         var uvAttribute = box.attributes.uv;
     
         SetFaceUVs(FRONT_FACE,  SquareToUVs(20, 20, 8, 12), uvAttribute);
-        SetFaceUVs(BACK_FACE,   SquareToUVs(28, 20, 8, 12), uvAttribute);
+        SetFaceUVs(BACK_FACE,   SquareToUVs(32, 20, 8, 12), uvAttribute);
     
-        SetFaceUVs(LEFT_FACE,   SquareToUVs(36, 20, 4, 12), uvAttribute);
-        SetFaceUVs(RIGHT_FACE,  SquareToUVs(16, 20, 4, 12), uvAttribute);
+        SetFaceUVs(LEFT_FACE,   SquareToUVs(16, 20, 4, 12), uvAttribute);
+        SetFaceUVs(RIGHT_FACE,  SquareToUVs(28, 20, 4, 12), uvAttribute);
     
         SetFaceUVs(TOP_FACE,    SquareToUVs(20, 16, 8, 4), uvAttribute);
         SetFaceUVs(BOTTOM_FACE, SquareToUVs(28, 16, 8, 4), uvAttribute);
@@ -127,10 +127,10 @@ function SkinMesh(width, height, overlayScalar){
         var uvAttribute = box.attributes.uv;
     
         SetFaceUVs(FRONT_FACE,  SquareToUVs(20, 16 + 20, 8, 12), uvAttribute);
-        SetFaceUVs(BACK_FACE,   SquareToUVs(28, 16 + 20, 8, 12), uvAttribute);
+        SetFaceUVs(BACK_FACE,   SquareToUVs(32, 16 + 20, 8, 12), uvAttribute);
     
-        SetFaceUVs(LEFT_FACE,   SquareToUVs(36, 16 + 20, 4, 12), uvAttribute);
-        SetFaceUVs(RIGHT_FACE,  SquareToUVs(16, 16 + 20, 4, 12), uvAttribute);
+        SetFaceUVs(LEFT_FACE,   SquareToUVs(16, 16 + 20, 4, 12), uvAttribute);
+        SetFaceUVs(RIGHT_FACE,  SquareToUVs(28, 16 + 20, 4, 12), uvAttribute);
     
         SetFaceUVs(TOP_FACE,    SquareToUVs(20, 16 + 16, 8, 4), uvAttribute);
         SetFaceUVs(BOTTOM_FACE, SquareToUVs(28, 16 + 16, 8, 4), uvAttribute);
@@ -414,23 +414,27 @@ function SkinMesh(width, height, overlayScalar){
     }
 
     this.AddToScene = (scene) => {
-        scene.add(this.head);
-        scene.add(this.torso);
+        let meshGroup = new THREE.Group();
+        meshGroup.add(this.head);
+        meshGroup.add(this.torso);
         // scene.add(this.rl);
         // scene.add(this.ll);
-        scene.add(this.meshGroups['rl']);
-        scene.add(this.meshGroups['ll']);
-        scene.add(this.meshGroups['rh']);
-        scene.add(this.meshGroups['lh']);
+        meshGroup.add(this.meshGroups['rl']);
+        meshGroup.add(this.meshGroups['ll']);
+        meshGroup.add(this.meshGroups['rh']);
+        meshGroup.add(this.meshGroups['lh']);
         // scene.add(this.lh);
         // scene.add(this.rh);
     
-        scene.add(this.headOverlay);
-        scene.add(this.torsoOverlay);
+        meshGroup.add(this.headOverlay);
+        meshGroup.add(this.torsoOverlay);
         // scene.add(this.rlOverlay);
         // scene.add(this.llOverlay);
         // scene.add(this.lhOverlay);
         // scene.add(this.rhOverlay);
+
+        scene.add(meshGroup);
+        return meshGroup;
     }
 
     function DisposeOfMesh(mesh){

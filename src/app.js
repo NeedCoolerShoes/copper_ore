@@ -122,7 +122,7 @@ function UseBucket(part, canvasTexture, pixel) {
 }
 
 function UseEraser(part, canvasTexture, pixel) {
-    ApplyBrush(canvasTexture, pixel, new THREE.Color(1, 1, 1, 0));
+    ApplyBrush(canvasTexture, pixel, [0, 0, 0, 0]);
 }
 
 function UseColorPicker(part, canvasTexture, pixel) {
@@ -291,12 +291,12 @@ function Initialize() {
 
     let buttons = {
         'clearSkinFullTransparent': () => {
-            let canvasTexture = new CanvasIntermediateTexture(undefined, width, height, width, height);
+            let canvasTexture = new CanvasIntermediateTexture(undefined, width, height);
             canvasTexture.ClearPixelsAlpha(width, height);
             copperOre.SetNewTexture(canvasTexture);
         },
         'clearSkin': () => {
-            let canvasTexture = new CanvasIntermediateTexture(undefined, width, height, width, height);
+            let canvasTexture = new CanvasIntermediateTexture(undefined, width, height);
             canvasTexture.ClearPixels(width, height, new THREE.Color(colors.clearColor[0] / 255, colors.clearColor[1] / 255, colors.clearColor[2] / 255));
             copperOre.SetNewTexture(canvasTexture);
         },

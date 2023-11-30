@@ -1,8 +1,11 @@
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {CanvasIntermediateTexture} from 'copperore/canvas_intermediate_texture';
-import {SkinGridBox} from 'copperore/skin_grid';
-import {SkinMesh} from 'copperore/skin_mesh_creator';
+import {CanvasIntermediateTexture} from './canvas_intermediate_texture';
+import {SkinGridBox} from './skin_grid';
+import {SkinMesh} from './skin_mesh_creator';
+import {SkinLayer} from './skin_layer';
+import {Utils} from './utils';
+import {EventBus} from './events';
 
 class CopperOre {
   constructor (params = {}) {
@@ -13,6 +16,8 @@ class CopperOre {
     this.tickCallback = params.tick;
     this.afterIntitialize = params.initialize;
     this.parent = params.parent || document.body;
+
+    this.events = new EventBus;
 
     this.Initialize()
   }
@@ -29,6 +34,9 @@ class CopperOre {
   currentSkinTexture;
   oldTexture;
   dirtyTexture = false;
+
+  layers = [];
+  currentLayer = 0;
 
   // another, maybe cleaner approach
   // would be to use a queue and a pointer for the current texture
@@ -75,6 +83,21 @@ class CopperOre {
   };
   disableTools = false;
 
+  tempCanvas;
+  textureCanvas;
+  layerCanvas;
+
+  events;
+
+  #layerUpdateHandler(event, params) {
+    this.events.signal(event, params);
+    this.events.signal("layer-update", {layers: this.layers, parentEvent: event});
+  }
+
+  on(eventName, callback) {
+    this.events.on(eventName, callback);
+  }
+
   Loop() {
     this.now = Date.now();
     var elapsed = this.now - this.then;
@@ -95,15 +118,16 @@ class CopperOre {
   }
 
   ChangeSkinFromTexture(texture) {
-    this.currentSkinTexture.dispose();
     this.currentSkinTexture = texture;
+    this.currentSkinTexture.minFilter = THREE.NearestFilter;
+    this.currentSkinTexture.magFilter = THREE.NearestFilter;
     this.skinMesh.UpdateTextureOnBodyParts(this.currentSkinTexture);
   }
 
   MouseClicked(event) {
     if (event.button == 0) {
-      this.mousePosition.x = (event.clientX / window.innerWidth) * 2 - 1;
-      this.mousePosition.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      this.mousePosition.x = (event.clientX / this.parent.clientWidth) * 2 - 1;
+      this.mousePosition.y = -(event.clientY / this.parent.clientHeight) * 2 + 1;
     }
   }
 
@@ -119,8 +143,8 @@ class CopperOre {
     }
 
     if (event.button == 0) {
-      this.mousePosition.x = (event.clientX / window.innerWidth) * 2 - 1;
-      this.mousePosition.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      this.mousePosition.x = (event.offsetX / this.parent.clientWidth) * 2 - 1;
+      this.mousePosition.y = -(event.offsetY / this.parent.clientHeight) * 2 + 1;
       this.clicked = true;
       if (!this.alreadyDowned) {
         this.alreadyDowned = true;
@@ -136,8 +160,8 @@ class CopperOre {
 
     if (event.button == 0) {
       if (this.clicked) {
-        this.mousePosition.x = (event.clientX / window.innerWidth) * 2 - 1;
-        this.mousePosition.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        this.mousePosition.x = (event.offsetX / this.parent.clientWidth) * 2 - 1;
+        this.mousePosition.y = -(event.offsetY / this.parent.clientHeight) * 2 + 1;
       }
     }
   }
@@ -220,7 +244,7 @@ class CopperOre {
   }
 
   ToolAction(part) {
-    if (!typeof(this.Tools) == "object") { return; };
+    if (!typeof(this.Tools) == "object" || Object.getOwnPropertyNames(this.Tools).length === 0) { return; };
     if (!this.Tools[this.currentTool]) {
       this.currentTool = Object.keys(this.Tools)[0]
     }
@@ -229,14 +253,14 @@ class CopperOre {
     pixel.x = Math.floor(pixel.x);
     pixel.y = this.IMAGE_HEIGHT - Math.ceil(pixel.y);
 
-    var canvasTexture = new CanvasIntermediateTexture(this.currentSkinTexture, this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
+    var canvasTexture = this.GetCurrentLayer().texture
 
     this.Tools[this.currentTool].call(this.defaultBind, part, canvasTexture, pixel)
 
     this.dirtyTexture = true;
-    this.currentSkinTexture = canvasTexture.FlushTexture();
-    part.object.material.map = this.currentSkinTexture;
-    part.object.material.needsUpdate = true;
+    canvasTexture.Render();
+
+    this.MergeLayers();
   }
 
   Tick() {
@@ -329,6 +353,66 @@ class CopperOre {
     this.ChangeSkinFromTexture(newTexture.FlushTexture());
   }
 
+  CreateHelperCanvas(width, height) {
+    return new OffscreenCanvas(width, height);
+  }
+  
+  
+  AddLayer(intermediateTexture) {
+    let layer = new SkinLayer({
+      texture: new CanvasIntermediateTexture(intermediateTexture, this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
+    })
+    this.layers.push(layer);
+    this.MergeLayers();
+    this.#layerUpdateHandler("layer-add", {layers: this.layers, newLayer: layer})
+  }
+
+  AddBlankLayer() {
+    let canvasTexture = new CanvasIntermediateTexture(undefined, this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
+    canvasTexture.ClearPixelsAlpha(this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
+    this.AddLayer({image: canvasTexture.canvas});
+  }
+
+  AddImageLayer(imageSrc, width, height) {
+    let image = new Image(width, height);
+    image.addEventListener("load", event => {
+      this.AddLayer(event.target);
+    })
+    image.src = imageSrc;
+  }
+
+  RemoveLayer(index) {
+    let layer = this.layers.splice(index, 1)[0];
+    if (this.layers.length < 1) { this.AddBlankLayer(); }
+    this.MergeLayers();
+    this.#layerUpdateHandler("layer-remove", {layers: this.layers, layerId: layer.id})
+  }
+
+  ReorderLayer(layerId, toIndex) {
+    let index = this.layers.findIndex(layer => {return layer.id == layerId;});
+    if (index != toIndex) {
+      this.layers.splice(toIndex, 0, this.layers.splice(index, 1)[0])
+      this.MergeLayers()
+    }
+    this.#layerUpdateHandler("layer-reorder", {from: index, to: toIndex, layers: this.layers})
+  }
+
+  GetCurrentLayer() {
+    this.currentLayer = Utils.Clamp(this.currentLayer, 0, this.layers.length - 1);
+    return this.layers[this.currentLayer];
+  }
+
+  MergeLayers() {
+    let context = this.textureCanvas.getContext('2d');
+    context.globalAlpha = 1.0;
+    context.clearRect(0, 0, this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
+    this.layers.forEach(layer => {
+      context.drawImage(layer.texture.canvas, 0, 0)
+    })
+    let texture = new THREE.CanvasTexture(this.textureCanvas);
+    this.ChangeSkinFromTexture(texture);
+  }
+
   Initialize() {
     window.addEventListener('click', this.MouseClicked.bind(this));
     window.addEventListener('mousedown', this.MouseDown.bind(this));
@@ -342,13 +426,12 @@ class CopperOre {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
     this.renderer.sortObjects = false;
-    this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.setSize(this.parent.clientWidth, this.parent.clientHeight);
     this.renderer.setClearColor(new THREE.Color(0.1, 0.1, 0.1));
-    this.renderer.outputColorSpace = THREE.NoColorSpace;
+    this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
     this.parent.appendChild(this.renderer.domElement);
-    ///
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.01, 1000);
+    this.camera = new THREE.PerspectiveCamera(75, this.parent.clientWidth / this.parent.clientHeight, 0.01, 1000);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.mouseButtons = {
       LEFT: THREE.MOUSE.ROTATE,
@@ -357,9 +440,10 @@ class CopperOre {
     };
     // window.addEventListener( 'resize', onWindowResize );
     ///
-    this.currentSkinTexture = new THREE.TextureLoader().load(this.defaultTexture);
-    this.currentSkinTexture.minFilter = THREE.NearestFilter;
-    this.currentSkinTexture.magFilter = THREE.NearestFilter;
+
+    this.tempCanvas = this.CreateHelperCanvas(this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
+    this.textureCanvas = this.CreateHelperCanvas(this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
+    this.layerCanvas = this.CreateHelperCanvas(this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
 
     const overlayScalar = 0.05;
 
@@ -367,9 +451,19 @@ class CopperOre {
     this.skinMesh = new SkinMesh(this.IMAGE_WIDTH, this.IMAGE_HEIGHT, overlayScalar);
     this.skinMesh.InitializeFullMesh(this.currentSkinTexture);
     this.skinMesh.ApplyOffsetsToBodyParts(this.skinOffsets);
-    this.skinMesh.AddToScene(this.scene);
+    let meshGroup = this.skinMesh.AddToScene(this.scene);
+
+    if (this.defaultTexture) {
+      this.AddImageLayer(this.defaultTexture, this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
+    } else {
+      this.AddBlankLayer()
+    }
 
     // skinMesh.normalMeshes['head'].visible = false;
+
+    let boundingBox = new THREE.Box3();
+    boundingBox.setFromObject(meshGroup);
+    boundingBox.getCenter(this.controls.target);
 
     this.camera.position.z = 5;
     this.then = Date.now();
@@ -391,6 +485,22 @@ class CopperOre {
     this.SetGridVisibility(true)
 
     this.controls.saveState();
+
+    let resizeHandler = new ResizeObserver( (entries, _) => {
+      let entry = entries[0];
+      this.renderer.setSize(entry.contentRect.width, entry.contentRect.height);
+      this.camera.aspect = entry.contentRect.width / entry.contentRect.height;
+      this.camera.updateProjectionMatrix();
+      this.Render();
+    })
+
+    resizeHandler.observe(this.parent);
+    this.renderer.domElement.style.cssText += "max-width: 100%; max-height: 100%";
+
+    EventBus.on("layer-blob-url", event => {
+      this.#layerUpdateHandler("layer-blob");
+    })
+
     this.Loop();
   }
 }
