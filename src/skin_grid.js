@@ -1,7 +1,7 @@
 // Custom implementation of the GridHelper made for custom width and height/ divisions x and y
 import * as THREE from 'three';
 
-const DEFAULT_GRID_COLOR = 0xb4b4b4
+const DEFAULT_GRID_COLOR = new THREE.Color('#7E7E7E')
 
 class SkinGrid extends THREE.LineSegments  {
     constructor(sw, sh, width, height, color1=DEFAULT_GRID_COLOR){
@@ -38,7 +38,10 @@ class SkinGrid extends THREE.LineSegments  {
         const geometry = new THREE.BufferGeometry();
         geometry.setAttribute( 'position', new THREE.Float32BufferAttribute( vertices, 3 ) );
         geometry.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
-        const material = new THREE.LineBasicMaterial( { vertexColors: true, toneMapped: false } );
+        const material = new THREE.LineBasicMaterial({
+            vertexColors: true,
+            toneMapped: false,
+        });
         
         super(geometry, material);
 

@@ -422,7 +422,7 @@ class CopperOre {
     this.scene = new THREE.Scene();
     this.gridScene = new THREE.Scene(); // separated for intersections
 
-    this.renderer = new THREE.WebGLRenderer();
+    this.renderer = new THREE.WebGLRenderer({antialias: true});
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
     this.renderer.sortObjects = false;
