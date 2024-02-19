@@ -5,10 +5,10 @@ import {SkinGridBox} from './skin_grid';
 import {SkinMesh} from './skin_mesh_creator';
 import {SkinLayer} from './skin_layer';
 import {Utils} from './utils';
-import {EventBus} from './events';
 
-class CopperOre {
+class CopperOre extends EventTarget {
   constructor (params = {}) {
+    super();
     this.defaultTexture = params.texture;
     this.defaultBind = params.bind;
     this.Tools = params.tools;
@@ -16,8 +16,6 @@ class CopperOre {
     this.tickCallback = params.tick;
     this.afterIntitialize = params.initialize;
     this.parent = params.parent || document.body;
-
-    this.events = new EventBus;
 
     this.Initialize()
   }
@@ -82,6 +80,7 @@ class CopperOre {
     grid: false
   };
   disableTools = false;
+  firstClick = true;
 
   tempCanvas;
   textureCanvas;
@@ -89,7 +88,7 @@ class CopperOre {
 
   events;
 
-  #layerUpdateHandler(event, params) {
+  offset(event, params) {
     this.events.signal(event, params);
     this.events.signal("layer-update", {layers: this.layers, parentEvent: event});
   }
@@ -146,6 +145,8 @@ class CopperOre {
       this.mousePosition.x = (event.offsetX / this.parent.clientWidth) * 2 - 1;
       this.mousePosition.y = -(event.offsetY / this.parent.clientHeight) * 2 + 1;
       this.clicked = true;
+      this.firstClick = true;
+
       if (!this.alreadyDowned) {
         this.alreadyDowned = true;
         this.oldTexture = this.currentSkinTexture;
@@ -283,15 +284,18 @@ class CopperOre {
             break;
           }
         }
-        if (!bad && !this.disableTools && intersects[currentIntersection].object.userData.bodyModel == true) {
-          this.controls.enableRotate = false;
-          this.ToolAction(intersects[currentIntersection]);
-        } else {
-          this.disableTools = true;
+        if (!bad && intersects[currentIntersection].object.userData.bodyModel == true) {
+          if (!this.disableTools) {
+            this.controls.enableRotate = false;
+            this.ToolAction(intersects[currentIntersection]);
+          }
         }
       } else {
-        this.disableTools = true;
+        if (this.firstClick) {
+          this.disableTools = true;
+        }
       }
+      this.firstClick = false;
     }
 
     if (typeof(this.tickCallback) == "function") {
@@ -360,11 +364,11 @@ class CopperOre {
   
   AddLayer(intermediateTexture) {
     let layer = new SkinLayer({
-      texture: new CanvasIntermediateTexture(intermediateTexture, this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
+      app: this, texture: new CanvasIntermediateTexture(intermediateTexture, this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
     })
     this.layers.push(layer);
     this.MergeLayers();
-    this.#layerUpdateHandler("layer-add", {layers: this.layers, newLayer: layer})
+    this.dispatchEvent(new CustomEvent('layer-add', {detail: {layers: this.layers, newLayer: layer}}));
   }
 
   AddBlankLayer() {
@@ -385,7 +389,7 @@ class CopperOre {
     let layer = this.layers.splice(index, 1)[0];
     if (this.layers.length < 1) { this.AddBlankLayer(); }
     this.MergeLayers();
-    this.#layerUpdateHandler("layer-remove", {layers: this.layers, layerId: layer.id})
+    this.dispatchEvent(new CustomEvent('layer-remove', {detail: {layers: this.layers, layerId: layer.id}}));
   }
 
   ReorderLayer(layerId, toIndex) {
@@ -394,7 +398,7 @@ class CopperOre {
       this.layers.splice(toIndex, 0, this.layers.splice(index, 1)[0])
       this.MergeLayers()
     }
-    this.#layerUpdateHandler("layer-reorder", {from: index, to: toIndex, layers: this.layers})
+    this.dispatchEvent(new CustomEvent('layer-reorder', {detail: {from: index, to: toIndex, layers: this.layers}}))
   }
 
   GetCurrentLayer() {
@@ -414,11 +418,6 @@ class CopperOre {
   }
 
   Initialize() {
-    window.addEventListener('click', this.MouseClicked.bind(this));
-    window.addEventListener('mousedown', this.MouseDown.bind(this));
-    window.addEventListener('mousemove', this.MouseMove.bind(this));
-    window.addEventListener('mouseup', this.MouseUp.bind(this));
-
     this.scene = new THREE.Scene();
     this.gridScene = new THREE.Scene(); // separated for intersections
 
@@ -430,7 +429,13 @@ class CopperOre {
     this.renderer.setClearColor(new THREE.Color(0.1, 0.1, 0.1));
     this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
+    this.renderer.domElement.addEventListener('click', this.MouseClicked.bind(this));
+    this.renderer.domElement.addEventListener('mousedown', this.MouseDown.bind(this));
+    this.renderer.domElement.addEventListener('mousemove', this.MouseMove.bind(this));
+    this.renderer.domElement.addEventListener('mouseup', this.MouseUp.bind(this));
     this.parent.appendChild(this.renderer.domElement);
+
+
     this.camera = new THREE.PerspectiveCamera(75, this.parent.clientWidth / this.parent.clientHeight, 0.01, 1000);
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.mouseButtons = {
@@ -468,19 +473,21 @@ class CopperOre {
     this.camera.position.z = 5;
     this.then = Date.now();
 
-    this.grids['head'] = this.CreateAndAddToSceneGridForBodypart('head', this.gridScene, 8, 8, new THREE.Vector3(1.0, 1.0, 1.0), this.skinOffsets, 0.001);
-    this.grids['torso'] = this.CreateAndAddToSceneGridForBodypart('torso', this.gridScene, 8, 12, new THREE.Vector3(1.0, 1.5, 0.5), this.skinOffsets, 0.001);
-    this.grids['rh'] = this.CreateAndAddToSceneGridForBodypart('rh', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5), this.skinOffsets, 0.001);
-    this.grids['lh'] = this.CreateAndAddToSceneGridForBodypart('lh', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5), this.skinOffsets, 0.001);
-    this.grids['rl'] = this.CreateAndAddToSceneGridForBodypart('rl', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5), this.skinOffsets, 0.001);
-    this.grids['ll'] = this.CreateAndAddToSceneGridForBodypart('ll', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5), this.skinOffsets, 0.001);
+    const offset = 0;
 
-    this.grids['headOverlay'] = this.CreateAndAddToSceneGridForBodypart('headOverlay', this.gridScene, 8, 8, new THREE.Vector3(1.0, 1.0, 1.0).addScalar(overlayScalar), this.skinOffsets, 0.001);
-    this.grids['torsoOverlay'] = this.CreateAndAddToSceneGridForBodypart('torsoOverlay', this.gridScene, 8, 12, new THREE.Vector3(1.0, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, 0.001);
-    this.grids['rhOverlay'] = this.CreateAndAddToSceneGridForBodypart('rhOverlay', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, 0.001);
-    this.grids['lhOverlay'] = this.CreateAndAddToSceneGridForBodypart('lhOverlay', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, 0.001);
-    this.grids['rlOverlay'] = this.CreateAndAddToSceneGridForBodypart('rlOverlay', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, 0.001);
-    this.grids['llOverlay'] = this.CreateAndAddToSceneGridForBodypart('llOverlay', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, 0.001);
+    this.grids['head'] = this.CreateAndAddToSceneGridForBodypart('head', this.gridScene, 8, 8, new THREE.Vector3(1.0, 1.0, 1.0), this.skinOffsets, offset);
+    this.grids['torso'] = this.CreateAndAddToSceneGridForBodypart('torso', this.gridScene, 8, 12, new THREE.Vector3(1.0, 1.5, 0.5), this.skinOffsets, offset);
+    this.grids['rh'] = this.CreateAndAddToSceneGridForBodypart('rh', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5), this.skinOffsets, offset);
+    this.grids['lh'] = this.CreateAndAddToSceneGridForBodypart('lh', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5), this.skinOffsets, offset);
+    this.grids['rl'] = this.CreateAndAddToSceneGridForBodypart('rl', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5), this.skinOffsets, offset);
+    this.grids['ll'] = this.CreateAndAddToSceneGridForBodypart('ll', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5), this.skinOffsets, offset);
+
+    this.grids['headOverlay'] = this.CreateAndAddToSceneGridForBodypart('headOverlay', this.gridScene, 8, 8, new THREE.Vector3(1.0, 1.0, 1.0).addScalar(overlayScalar), this.skinOffsets, offset);
+    this.grids['torsoOverlay'] = this.CreateAndAddToSceneGridForBodypart('torsoOverlay', this.gridScene, 8, 12, new THREE.Vector3(1.0, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, offset);
+    this.grids['rhOverlay'] = this.CreateAndAddToSceneGridForBodypart('rhOverlay', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, offset);
+    this.grids['lhOverlay'] = this.CreateAndAddToSceneGridForBodypart('lhOverlay', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, offset);
+    this.grids['rlOverlay'] = this.CreateAndAddToSceneGridForBodypart('rlOverlay', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, offset);
+    this.grids['llOverlay'] = this.CreateAndAddToSceneGridForBodypart('llOverlay', this.gridScene, 4, 12, new THREE.Vector3(0.5, 1.5, 0.5).addScalar(overlayScalar), this.skinOffsets, offset);
 
     this.SetGridVisibility(true)
 
@@ -496,10 +503,6 @@ class CopperOre {
 
     resizeHandler.observe(this.parent);
     this.renderer.domElement.style.cssText += "max-width: 100%; max-height: 100%";
-
-    EventBus.on("layer-blob-url", event => {
-      this.#layerUpdateHandler("layer-blob");
-    })
 
     this.Loop();
   }

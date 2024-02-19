@@ -1,8 +1,9 @@
 import * as THREE from 'three';
-import {EventBus} from './events';
+import { LayerToPreview } from './layer_preview';
 
-class CanvasIntermediateTexture {
+class CanvasIntermediateTexture extends EventTarget {
     constructor(texture, imgWidth, imgHeight){
+        super();
         // w and h are only read if the texture is undefined, meaning this canvas will be empty
         this.imgWidth = imgWidth;
         this.imgHeight = imgHeight;
@@ -16,13 +17,14 @@ class CanvasIntermediateTexture {
         this.imageData = this.context.getImageData( 0, 0, this.canvas.width, this.canvas.height);
         this.data = this.imageData.data;
         this.visitedTable = {};
-        this.events = new EventBus;
 
-        this.RenderBlob()
+        this.renderCount = 0;
+
+        this.RenderPreview()
     }
 
-    layerBlob;
-    layerURL = "";
+    layerPreviewBlob;
+    layerPreviewURL = "";
 
     ClearPixelsAlpha(w, h) {
         for(let i = 0; i < this.canvas.width * this.canvas.height; ++i){
@@ -90,17 +92,19 @@ class CanvasIntermediateTexture {
     }
 
     Render() {
+        this.RenderPreview();
         this.context.putImageData(this.imageData, 0, 0);
-        this.RenderBlob();
     }
 
-    RenderBlob() {
-        this.canvas.convertToBlob().then(blob => {
-            this.layerURL = URL.createObjectURL(blob);
-            if (this.layerBlob) { URL.revokeObjectURL(this.layerBlob); }
-            this.layerBlob = blob;
-            this.events.signal("blob", {blob: this.layerBlob, url: this.layerURL})
-        });
+    RenderPreview() {
+        const preview = LayerToPreview(this.canvas);
+        preview.convertToBlob().then(blob => {
+            const url = URL.createObjectURL(blob);
+            this.layerPreviewURL = url;
+            if (this.layerPreviewBlob) { URL.revokeObjectURL(this.layerPreviewBlob); }
+            this.layerPreviewBlob = blob;
+            this.dispatchEvent(new CustomEvent('layer-preview', { detail: {url: url} }))
+        })
     }
 
     FlushTexture() {
