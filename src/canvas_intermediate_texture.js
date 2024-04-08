@@ -83,7 +83,13 @@ class CanvasIntermediateTexture extends EventTarget {
             return;
         }
         this.visitedTable[point.x + ":" + point.y] = true;
-        this.ChangePixelAt(point, newColor);
+        let useColor;
+        if (typeof newColor === "function") {
+            useColor = newColor(originalPixel)
+        } else {
+            useColor = newColor
+        }
+        this.ChangePixelAt(point, useColor);
         
         this.Fill(new THREE.Vector3(point.x + 1, point.y), originalPixel, newColor);
         this.Fill(new THREE.Vector3(point.x - 1, point.y), originalPixel, newColor);

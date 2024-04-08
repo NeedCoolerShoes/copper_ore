@@ -86,17 +86,6 @@ class CopperOre extends EventTarget {
   textureCanvas;
   layerCanvas;
 
-  events;
-
-  offset(event, params) {
-    this.events.signal(event, params);
-    this.events.signal("layer-update", {layers: this.layers, parentEvent: event});
-  }
-
-  on(eventName, callback) {
-    this.events.on(eventName, callback);
-  }
-
   Loop() {
     this.now = Date.now();
     var elapsed = this.now - this.then;
@@ -249,6 +238,8 @@ class CopperOre extends EventTarget {
     if (!this.Tools[this.currentTool]) {
       this.currentTool = Object.keys(this.Tools)[0]
     }
+
+    this.dispatchEvent(new CustomEvent('tool-action', {detail: {tool: this.currentTool, part: part}}));
 
     let pixel = new THREE.Vector2(part.uv.x * this.IMAGE_WIDTH, part.uv.y * this.IMAGE_HEIGHT);
     pixel.x = Math.floor(pixel.x);
@@ -440,7 +431,7 @@ class CopperOre extends EventTarget {
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
     this.controls.mouseButtons = {
       LEFT: THREE.MOUSE.ROTATE,
-      MIDDLE: THREE.MOUSE.PAN,
+      MIDDLE: undefined,
       RIGHT: THREE.MOUSE.ROTATE
     };
     // window.addEventListener( 'resize', onWindowResize );
