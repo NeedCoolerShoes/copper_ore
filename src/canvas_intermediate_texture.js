@@ -47,12 +47,19 @@ class CanvasIntermediateTexture extends EventTarget {
     PixelAt(point) {
         return [this.data[(point.x * 4 + 0) + point.y * this.imgWidth * 4],
                 this.data[(point.x * 4 + 1) + point.y * this.imgWidth * 4],
-                this.data[(point.x * 4 + 2) + point.y * this.imgWidth * 4]]
+                this.data[(point.x * 4 + 2) + point.y * this.imgWidth * 4],
+                this.data[(point.x * 4 + 3) + point.y * this.imgWidth * 4],
+            ]
     }
 
     GetColorAt(point) {
-        var pixel = PixelAt(point);
+        var pixel = this.PixelAt(point);
         return new THREE.Color(pixel[0] / 255, pixel[1] / 255, pixel[2] / 255);
+    }
+
+    GetRGBA(point) {
+        var pixel = this.PixelAt(point);
+        return {r: pixel[0], g: pixel[1], b: pixel[2], a: pixel[3]}
     }
     
     ChangePixelAt(point, color) {
