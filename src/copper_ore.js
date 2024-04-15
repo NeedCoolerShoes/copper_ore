@@ -52,6 +52,13 @@ class CopperOre extends EventTarget {
   IMAGE_WIDTH = 64;
   IMAGE_HEIGHT = 64;
 
+  skinParts = [
+    'head', 'torso', 'rl', 'll', 'rh', 'lh'
+  ]
+  skinOverlayParts = [
+    'headOverlay', 'torsoOverlay', 'rlOverlay', 'llOverlay', 'rhOverlay', 'lhOverlay'
+  ]
+  
   skinOffsets = {
     'headOverlay': new THREE.Vector3(0, 1.25, 0),
     'head': new THREE.Vector3(0, 1.25, 0),
@@ -77,10 +84,14 @@ class CopperOre extends EventTarget {
   clicked = false;
   alreadyDowned = false;
   settings = {
-    grid: false
+    grid: false,
+    overlay: true,
+    skin: true
   };
+  disableInput = false;
   disableTools = false;
   firstClick = true;
+  firstClickOut = false;
 
   tempCanvas;
   textureCanvas;
@@ -120,7 +131,13 @@ class CopperOre extends EventTarget {
   }
 
   SetGridVisibility(status) {
-    for (let gridPart of Object.values(this.grids)) {
+    this.settings.grid = status;
+    for (let part of Object.keys(this.grids)) {
+      const gridPart = this.grids[part];
+      const skinPart = this.skinMesh.normalMeshes[part] || this.skinMesh.overlayMeshes[part];
+
+      if (!skinPart || !skinPart.visible) { return; }
+      
       gridPart.Visible(status);
     }
   }
@@ -133,13 +150,29 @@ class CopperOre extends EventTarget {
     if (event.button == 0) {
       this.mousePosition.x = (event.offsetX / this.parent.clientWidth) * 2 - 1;
       this.mousePosition.y = -(event.offsetY / this.parent.clientHeight) * 2 + 1;
-      this.clicked = true;
-      this.firstClick = true;
+      this.InputDown()
+    }
+  }
 
-      if (!this.alreadyDowned) {
-        this.alreadyDowned = true;
-        this.oldTexture = this.currentSkinTexture;
-      }
+  TouchDown(event) {
+    if (this.disableInput) {
+      return;
+    }
+    if (!this.disableTools) {
+      this.controls.enabled = false;
+    }
+
+    this.TouchPosition(event);
+    this.InputDown();
+  }
+
+  InputDown() {
+    this.clicked = true;
+    this.firstClick = true;
+
+    if (!this.alreadyDowned) {
+      this.alreadyDowned = true;
+      this.oldTexture = this.currentSkinTexture;
     }
   }
 
@@ -156,15 +189,44 @@ class CopperOre extends EventTarget {
     }
   }
 
+  TouchMove(event) {
+    if (this.disableInput) {
+      return;
+    }
+
+    if (this.clicked) {
+      this.TouchPosition(event);
+    }
+  }
+
+  TouchPosition(event) {
+    const touch = event.touches[0];
+    const offset = this.parent.getBoundingClientRect();
+    const touchX = touch.clientX - offset.x;
+    const touchY = touch.clientY - offset.y;
+
+    this.mousePosition.x = (touchX / this.parent.clientWidth) * 2 - 1;
+    this.mousePosition.y = -(touchY / this.parent.clientHeight) * 2 + 1;
+  }
+
   MouseUp(event) {
     if (event.button == 0) {
-      this.clicked = false;
-      this.AppendTextureToHistoryStack(this.oldTexture);
-      this.alreadyDowned = false;
-      this.dirtyTexture = false;
-      this.disableTools = false;
-      this.controls.enableRotate = true;
+      this.InputUp();
     }
+  }
+
+  TouchUp(_) {
+    this.controls.enabled = true;
+    this.InputUp();
+  }
+
+  InputUp() {
+    this.clicked = false;
+    this.AppendTextureToHistoryStack(this.oldTexture);
+    this.alreadyDowned = false;
+    this.dirtyTexture = false;
+    this.firstClickOut = false;
+    this.controls.enableRotate = true;
   }
 
   AppendTextureToHistoryStack(texture) {
@@ -276,14 +338,14 @@ class CopperOre extends EventTarget {
           }
         }
         if (!bad && intersects[currentIntersection].object.userData.bodyModel == true) {
-          if (!this.disableTools) {
+          if (!this.disableTools && !this.firstClickOut) {
             this.controls.enableRotate = false;
             this.ToolAction(intersects[currentIntersection]);
           }
         }
       } else {
         if (this.firstClick) {
-          this.disableTools = true;
+          this.firstClickOut = true;
         }
       }
       this.firstClick = false;
@@ -322,13 +384,25 @@ class CopperOre extends EventTarget {
   TogglePart(part) {
     let meshPart = this.skinMesh.normalMeshes[part];
     meshPart.visible = !meshPart.visible;
-    this.grids[part].Visible(meshPart.visible);
+    this.grids[part].Visible(meshPart.visible && this.settings.grid);
   }
 
   ToggleOverlayPart(part) {
     let meshPart = this.skinMesh.overlayMeshes[part];
     meshPart.visible = !meshPart.visible;
-    this.grids[part].Visible(meshPart.visible);
+    this.grids[part].Visible(meshPart.visible && this.settings.grid);
+  }
+
+  ToggleParts() {
+    this.skinParts.forEach(part => {
+      this.TogglePart(part)
+    })
+  }
+
+  ToggleOverlayParts() {
+    this.skinOverlayParts.forEach(part => {
+      this.ToggleOverlayPart(part)
+    })
   }
 
   AddToScene(element) {
@@ -421,9 +495,12 @@ class CopperOre extends EventTarget {
     this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
 
     this.renderer.domElement.addEventListener('click', this.MouseClicked.bind(this));
+    this.renderer.domElement.addEventListener('touchstart', this.TouchDown.bind(this));
     this.renderer.domElement.addEventListener('mousedown', this.MouseDown.bind(this));
     this.renderer.domElement.addEventListener('mousemove', this.MouseMove.bind(this));
+    this.renderer.domElement.addEventListener('touchmove', this.TouchMove.bind(this));
     this.renderer.domElement.addEventListener('mouseup', this.MouseUp.bind(this));
+    this.renderer.domElement.addEventListener('touchend', this.TouchUp.bind(this));
     this.parent.appendChild(this.renderer.domElement);
 
 
