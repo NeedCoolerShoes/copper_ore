@@ -47,6 +47,9 @@ const LAYOUT = {
 }
 
 function LayerToPreview(image, variant = 'classic') {
+  // exports a blob url
+  image.convertToBlob().then(function (result) {localStorage.setItem('skinRef', URL.createObjectURL(result))})
+  
   const canvas = new OffscreenCanvas(36, 32);
   const ctx = canvas.getContext('2d');
 
@@ -57,7 +60,9 @@ function LayerToPreview(image, variant = 'classic') {
     segment.uv.forEach(area => {
       const from = uvmap[area];
       const to = segment.coordinates;
-      ctx.drawImage(image, ...from, ...to, from[2], from[3])
+      ctx.drawImage(image, ...from, ...to, from[2], from[3],
+                    image, 0, 0, canvas.width, canvas.height
+        )
     })
   })
 
