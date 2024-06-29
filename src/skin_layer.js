@@ -30,6 +30,20 @@ class SkinLayer extends EventTarget {
   select() {
     let index = this.#getLayerIndex()
     this.app.currentLayer = index;
+    this.current = true;
+  }
+
+  deselect() {
+    this.current = false;
+  }
+
+  serialize() {
+    const binString = Array.from(this.texture.imageData.data, (byte) => String.fromCodePoint(byte)).join("");
+    return {
+      name: this.name,
+      current: this.current,
+      data: btoa(binString)
+    }
   }
 }
 

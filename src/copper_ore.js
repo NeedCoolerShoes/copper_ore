@@ -482,6 +482,25 @@ class CopperOre extends EventTarget {
     this.ChangeSkinFromTexture(texture);
   }
 
+  ExportToURL() {
+    return new Promise((ok, _) => {
+        this.textureCanvas.convertToBlob().then( blob => {
+          ok(URL.createObjectURL(blob))
+        }
+      )
+    })
+  }
+
+  Download(filename = "download.png") {
+    this.ExportToURL().then(url => {
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      link.click();
+      link.remove();
+    })
+  }
+
   Initialize() {
     this.scene = new THREE.Scene();
     this.gridScene = new THREE.Scene(); // separated for intersections
