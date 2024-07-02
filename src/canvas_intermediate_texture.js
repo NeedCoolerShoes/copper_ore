@@ -128,6 +128,10 @@ class CanvasIntermediateTexture extends EventTarget {
         newTexture.magFilter = THREE.NearestFilter;
         return newTexture.clone();
     }
+
+    FlushCanvasTexture() {
+        return new CanvasIntermediateTexture(this.FlushTexture(), this.imgWidth, this.imgHeight);
+    }
 }
 
 export {CanvasIntermediateTexture};

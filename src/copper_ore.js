@@ -3,8 +3,12 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {CanvasIntermediateTexture} from './canvas_intermediate_texture';
 import {SkinGridBox} from './skin_grid';
 import {SkinMesh} from './skin_mesh_creator';
-import {SkinLayer} from './skin_layer';
 import {Utils} from './utils';
+import {HistoryStack} from './history/stack';
+import {DeleteLayerEntry} from './history/delete_layer_entry';
+import { AddLayerEntry } from './history/add_layer_entry';
+import { UpdateLayerTextureEntry } from './history/update_layer_texture_entry';
+import { ReorderLayerEntry } from './history/reorder_layer_entry';
 
 class CopperOre extends EventTarget {
   constructor (params = {}) {
@@ -43,6 +47,8 @@ class CopperOre extends EventTarget {
   // will let this the way it is now but maybe someday(never) I will change it
   historyStack = [];
   revertStack = [];
+
+  history = new HistoryStack();
 
   now;
   then;
@@ -222,11 +228,13 @@ class CopperOre extends EventTarget {
 
   InputUp() {
     this.clicked = false;
-    this.AppendTextureToHistoryStack(this.oldTexture);
+    this.history.add(new UpdateLayerTextureEntry(this, this.GetCurrentLayer()));
     this.alreadyDowned = false;
     this.dirtyTexture = false;
     this.firstClickOut = false;
     this.controls.enableRotate = true;
+
+    this.dispatchEvent(new CustomEvent('after-input'));
   }
 
   AppendTextureToHistoryStack(texture) {
@@ -427,43 +435,45 @@ class CopperOre extends EventTarget {
   }
   
   
-  AddLayer(intermediateTexture) {
-    let layer = new SkinLayer({
-      app: this, texture: new CanvasIntermediateTexture(intermediateTexture, this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
-    })
-    this.layers.push(layer);
-    this.MergeLayers();
-    this.dispatchEvent(new CustomEvent('layer-add', {detail: {layers: this.layers, newLayer: layer}}));
+  AddLayer(intermediateTexture, ghost = false) {
+    const entry = new AddLayerEntry(this, intermediateTexture);
+    if (ghost) {
+      this.history.addGhost(entry);
+    } else {
+      this.history.add(entry);
+    }
   }
 
-  AddBlankLayer() {
+  AddBlankLayer(ghost = false) {
     let canvasTexture = new CanvasIntermediateTexture(undefined, this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
     canvasTexture.ClearPixelsAlpha(this.IMAGE_WIDTH, this.IMAGE_HEIGHT);
-    this.AddLayer({image: canvasTexture.canvas});
+    this.AddLayer({image: canvasTexture.canvas}, ghost);
   }
 
-  AddImageLayer(imageSrc, width, height) {
+  AddImageLayer(imageSrc, width, height, ghost = false) {
     let image = new Image(width, height);
     image.addEventListener("load", event => {
-      this.AddLayer(event.target);
+      this.AddLayer(event.target, ghost);
     })
     image.src = imageSrc;
   }
 
   RemoveLayer(index) {
-    let layer = this.layers.splice(index, 1)[0];
-    if (this.layers.length < 1) { this.AddBlankLayer(); }
-    this.MergeLayers();
-    this.dispatchEvent(new CustomEvent('layer-remove', {detail: {layers: this.layers, layerId: layer.id}}));
+    this.history.add(new DeleteLayerEntry(this, index));
+  }
+
+  RemoveAllLayers() {
+    this.layers.forEach(layer => {
+      this.dispatchEvent(new CustomEvent('layer-remove', {detail: {layers: this.layers, layerId: layer.id}}));
+    })
+    this.layers = [];
   }
 
   ReorderLayer(layerId, toIndex) {
     let index = this.layers.findIndex(layer => {return layer.id == layerId;});
     if (index != toIndex) {
-      this.layers.splice(toIndex, 0, this.layers.splice(index, 1)[0])
-      this.MergeLayers()
+      this.history.add(new ReorderLayerEntry(this, index, toIndex))
     }
-    this.dispatchEvent(new CustomEvent('layer-reorder', {detail: {from: index, to: toIndex, layers: this.layers}}))
   }
 
   GetCurrentLayer() {
@@ -546,9 +556,9 @@ class CopperOre extends EventTarget {
     let meshGroup = this.skinMesh.AddToScene(this.scene);
 
     if (this.defaultTexture) {
-      this.AddImageLayer(this.defaultTexture, this.IMAGE_WIDTH, this.IMAGE_HEIGHT)
+      this.AddImageLayer(this.defaultTexture, this.IMAGE_WIDTH, this.IMAGE_HEIGHT, true)
     } else {
-      this.AddBlankLayer()
+      window.addEventListener("load", () => this.AddBlankLayer(true))
     }
 
     // skinMesh.normalMeshes['head'].visible = false;
