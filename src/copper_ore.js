@@ -40,11 +40,6 @@ class CopperOre extends EventTarget {
   layers = [];
   currentLayer = 0;
 
-  // another, maybe cleaner approach
-  // would be to use a queue and a pointer for the current texture
-  // undo would decrease the pointer
-  // redo would increase the pointer
-  // will let this the way it is now but maybe someday(never) I will change it
   historyStack = [];
   revertStack = [];
 
@@ -590,6 +585,7 @@ class CopperOre extends EventTarget {
 
     this.controls.saveState();
 
+    this.renderer.domElement.style.cssText += "max-width: 100%; max-height: 100%";
     let resizeHandler = new ResizeObserver( (entries, _) => {
       let entry = entries[0];
       this.renderer.setSize(entry.contentRect.width, entry.contentRect.height);
@@ -599,7 +595,6 @@ class CopperOre extends EventTarget {
     })
 
     resizeHandler.observe(this.parent);
-    this.renderer.domElement.style.cssText += "max-width: 100%; max-height: 100%";
 
     this.Loop();
   }

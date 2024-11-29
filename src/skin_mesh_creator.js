@@ -78,7 +78,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, alphaTest:1, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, transparent:true, side:THREE.FrontSide});
         return new THREE.Mesh( box, material );
     }
     
@@ -98,7 +98,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.FrontSide});
         material.transparent = true;
         return new THREE.Mesh( box, material );
     }
@@ -118,7 +118,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, alphaTest:1, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, transparent:true, side:THREE.FrontSide});
         return new THREE.Mesh( box, material );
     }
     
@@ -137,7 +137,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.FrontSide});
         material.transparent = true;
         return new THREE.Mesh( box, material );
     }
@@ -157,7 +157,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, alphaTest:1, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, transparent:true, side:THREE.FrontSide});
         return new THREE.Mesh( box, material );
     }
     
@@ -176,7 +176,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.FrontSide});
         material.transparent = true;
         return new THREE.Mesh( box, material );
     }
@@ -196,7 +196,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, alphaTest:1, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, transparent:true, side:THREE.FrontSide});
         return new THREE.Mesh( box, material );
     }
     
@@ -215,7 +215,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
 
-        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.FrontSide});
         material.transparent = true;
         return new THREE.Mesh( box, material );
     }
@@ -235,7 +235,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, alphaTest:1, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, transparent:true, side:THREE.FrontSide});
         return new THREE.Mesh( box, material );
     }
     
@@ -254,7 +254,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.FrontSide});
         material.transparent = true;
         return new THREE.Mesh( box, material );
     }
@@ -274,7 +274,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, alphaTest:1, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, transparent:true, side:THREE.FrontSide});
         return new THREE.Mesh( box, material );
     }
     
@@ -293,7 +293,7 @@ function SkinMesh(width, height, overlayScalar){
     
         uvAttribute.needsUpdate = true;
     
-        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.DoubleSide});
+        const material = new THREE.MeshBasicMaterial({map:skin, side:THREE.FrontSide});
         material.transparent = true;
         return new THREE.Mesh( box, material );
     }
